@@ -1,0 +1,86 @@
+/* Full screen wrapper to center the card */
+.login-wrapper {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f0f0f0;
+}
+
+/* Login card container */
+.login-card {
+    width: 360px;
+    background-color: #ffffff;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+/* Title */
+.login-title {
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 24px;
+    font-weight: 600;
+    color: #333333;
+}
+
+/* Form groups for spacing */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+}
+
+/* Labels */
+.label-text {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #555555;
+}
+
+/* Input fields */
+.form-control {
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+    .form-control:focus {
+        border-color: #007bff;
+    }
+
+/* Login button */
+.btn-login {
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s;
+}
+
+    .btn-login:hover {
+        background-color: #0056b3;
+    }
+
+/* Link styling */
+.login-card a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+    .login-card a:hover {
+        text-decoration: underline;
+    }

@@ -1,0 +1,71 @@
+.entry-title {
+    margin-bottom: 10px;
+}
+
+.entry-meta {
+    color: #555;
+    margin-bottom: 15px;
+}
+
+    .entry-meta .time {
+        margin-left: 15px;
+    }
+
+.entry-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.title-input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+}
+
+.badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+.positive {
+    background-color: #00e5ff;
+}
+
+.happy {
+    background-color: #00e5ff;
+}
+
+/* Quill editor */
+.editor-container {
+    background: white;
+    border-radius: 15px;
+    padding: 10px;
+}
+
+#editor {
+    height: 300px;
+}
+
+/* Make Quill toolbar buttons primary */
+.ql-toolbar button {
+    background-color: #0d6efd;
+    color: white;
+    border-radius: 6px;
+    margin-right: 5px;
+}
+
+    .ql-toolbar button:hover {
+        background-color: #0b5ed7;
+    }
+
+/* Action buttons */
+.action-buttons {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}

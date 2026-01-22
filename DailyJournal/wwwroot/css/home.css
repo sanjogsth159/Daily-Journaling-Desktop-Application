@@ -1,0 +1,81 @@
+.welcome-text {
+    margin-bottom: 20px;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+/* Stat Cards */
+.stat-card {
+    background-color: #6f8499;
+    color: white;
+    padding: 18px;
+    border-radius: 10px;
+    font-size: 16px;
+}
+
+/* Entry Card */
+.entry-card {
+    grid-column: span 2;
+    background-color: #6f8499;
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.entry-header {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.entry-meta {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.mood {
+    background-color: #27d6d6;
+    color: black;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+.entry-content {
+    background-color: white;
+    color: black;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+
+.entry-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+}
+
+.view-link {
+    cursor: pointer;
+    font-weight: 500;
+}
+
+/* Quick Actions */
+.quick-actions {
+    grid-column: span 2;
+    background-color: #6f8499;
+    padding: 20px;
+    border-radius: 12px;
+    color: white;
+}
+
+.action-box {
+    background-color: #b7c6cf;
+    height: 35px;
+    border-radius: 20px;
+    margin-top: 10px;
+}

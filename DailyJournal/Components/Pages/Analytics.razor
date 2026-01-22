@@ -1,0 +1,73 @@
+﻿@page "/analytics"
+
+<h2 class="analytics-title">Analytics</h2>
+
+<!-- Date Range Filter -->
+<div class="filter-bar">
+    <span>📅 Date Range</span>
+    <input type="date" />
+    <span>to</span>
+    <input type="date" />
+</div>
+
+<div class="analytics-grid">
+
+    <!-- Mood Distribution -->
+    <div class="analytics-card">
+        <h4>Mood Distribution</h4>
+        <div class="chart-placeholder">Pie / Bar Chart</div>
+        <p>Positive • Neutral • Negative</p>
+    </div>
+
+    <!-- Most Frequent Mood -->
+    <div class="analytics-card">
+        <h4>Most Frequent Mood</h4>
+        <div class="highlight-box">😊 Happy</div>
+    </div>
+
+    <!-- Daily Streak -->
+    <div class="analytics-card">
+        <h4>Daily Streak</h4>
+        <div class="metric">🔥 7 Days</div>
+    </div>
+
+    <!-- Longest Streak -->
+    <div class="analytics-card">
+        <h4>Longest Streak</h4>
+        <div class="metric">🏆 21 Days</div>
+    </div>
+
+    <!-- Missed Days -->
+    <div class="analytics-card full-width">
+        <h4>Missed Days</h4>
+        <div class="tag-list">
+            <span class="tag">12 Dec</span>
+            <span class="tag">18 Dec</span>
+            <span class="tag">25 Dec</span>
+        </div>
+    </div>
+
+    <!-- Most Used Tags -->
+    <div class="analytics-card">
+        <h4>Most Used Tags</h4>
+        <div class="chart-placeholder">Bar / Word Cloud</div>
+        <p>#Work #Health #Travel</p>
+    </div>
+
+    <!-- Tag Breakdown -->
+    <div class="analytics-card">
+        <h4>Tag Breakdown</h4>
+        <div class="chart-placeholder">% per Category</div>
+    </div>
+
+    <!-- Word Count Trends -->
+    <div class="analytics-card full-width">
+        <h4>Word Count Trends</h4>
+        <div class="chart-placeholder">Line Chart (Avg Words / Entry)</div>
+    </div>
+
+</div>
+
+@code {
+
+}

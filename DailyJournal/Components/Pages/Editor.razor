@@ -1,0 +1,38 @@
+﻿@page "/today-entry"
+@inject IJSRuntime JS
+
+<h2 class="entry-title">Today’s Entry</h2>
+
+<div class="entry-meta">
+    📅 21 December 2025
+    <span class="time">🕒 12:55 PM</span>
+</div>
+
+<div class="entry-top">
+    <InputText class="title-input" placeholder="Enter Title" />
+
+    <span class="badge positive">Positive</span>
+    <span class="badge happy">😊 Happy</span>
+</div>
+
+<!-- Quill Toolbar & Editor -->
+<div class="editor-container">
+    <div id="editor"></div>
+</div>
+
+<div class="action-buttons">
+    <button class="btn btn-primary">Save</button>
+    <button class="btn btn-primary">Save PDF</button>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("quillEditor.init");
+        }
+    }
+}
+<h3>Editor</h3>
+

@@ -1,0 +1,78 @@
+.analytics-title {
+    margin-bottom: 15px;
+}
+
+.filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    background-color: #6f8499;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 10px;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.analytics-card {
+    background-color: #6f8499;
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+    .analytics-card h4 {
+        margin-bottom: 10px;
+    }
+
+.full-width {
+    grid-column: span 2;
+}
+
+/* Placeholders for charts */
+.chart-placeholder {
+    background-color: #b7c6cf;
+    height: 150px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    font-weight: 500;
+}
+
+/* Highlight boxes */
+.highlight-box {
+    background-color: #00e5ff;
+    color: black;
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 18px;
+}
+
+/* Metrics */
+.metric {
+    font-size: 22px;
+    font-weight: bold;
+}
+
+/* Tags */
+.tag-list {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.tag {
+    background-color: #b7c6cf;
+    color: black;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+}
