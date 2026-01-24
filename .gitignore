@@ -1,0 +1,14 @@
+# .gitignore
+# Visual Studio / VS Code / build artifacts
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.ide
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store

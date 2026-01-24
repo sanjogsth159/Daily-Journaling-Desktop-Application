@@ -2,20 +2,17 @@
 using DailyJournal.Model;
 using SQLite;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DailyJournal.Service
 {
     public class AuthService
     {
-        private SQLiteAsyncConnection connection;
+        private readonly SQLiteAsyncConnection _connection;
 
         public AuthService(AppDatabase database)
         {
-            connection = database.Connection;
+            _connection = database.Connection;
         }
 
         // Register user
@@ -27,7 +24,7 @@ namespace DailyJournal.Service
                     return (false, "Username and password are required");
 
                 // Check existing username
-                var existingUser = await connection.Table<UserModel>()
+                var existingUser = await _connection.Table<UserModel>()
                     .FirstOrDefaultAsync(u => u.UserName == user.UserName);
 
                 if (existingUser != null)
@@ -36,11 +33,8 @@ namespace DailyJournal.Service
                 if (user.Password != user.ConfirmPassword)
                     return (false, "Passwords do not match");
 
-                // Save in SQLite
-                await connection.InsertAsync(user);
-
-                // Save password securely
-                await SecureStorage.Default.SetAsync($"password_{user.UserName}", user.Password);
+                // Save in SQLite (consider hashing passwords before storing in production)
+                await _connection.InsertAsync(user);
 
                 Console.WriteLine($"User registered: {user.UserName}");
                 return (true, "Registration successful");
@@ -60,11 +54,7 @@ namespace DailyJournal.Service
                 if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
                     return (false, null, "Enter both username and password");
 
-                // Optional: get password from SecureStorage for debugging
-                var storedPassword = await SecureStorage.Default.GetAsync($"password_{username}");
-                Console.WriteLine($"Stored password from SecureStorage: {storedPassword}");
-
-                var user = await connection.Table<UserModel>()
+                var user = await _connection.Table<UserModel>()
                     .Where(u => u.UserName == username && u.Password == password)
                     .FirstOrDefaultAsync();
 
@@ -72,7 +62,7 @@ namespace DailyJournal.Service
                     return (false, null, "Invalid username or password");
 
                 user.LastLoginAt = DateTime.Now;
-                await connection.UpdateAsync(user);
+                await _connection.UpdateAsync(user);
 
                 return (true, user, "Login successful");
             }

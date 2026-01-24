@@ -1,10 +1,6 @@
 ﻿using SQLite;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DailyJournal.Model
 {
@@ -12,28 +8,26 @@ namespace DailyJournal.Model
     {
         [Required]
         [PrimaryKey, AutoIncrement]
-        public int UserID {  get; set; }
+        public int UserID { get; set; }
 
         [Required]
         [Unique]
-        public string UserName { get; set; }
-
-        public string? Image {  get; set; }
+        public string UserName { get; set; } = string.Empty;
 
 
         [DataType(DataType.Password)]
         [StringLength(20)]
         [MinLength(8)]
-        public string Password { get; set; }
+        public string Password { get; set; } = string.Empty;
 
         [Ignore]
         [Required(ErrorMessage = "Confirm Password is required")]
-        public string? ConfirmPassword { get; set; }
+        public string ConfirmPassword { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime LastLoginAt { get; set; } = DateTime.Now;
 
-        public string? PreferredTheme {  get; set; } 
+        public string? PreferredTheme { get; set; }
     }
 }

@@ -1,38 +1,170 @@
 ﻿@page "/today-entry"
+@using DailyJournal.Model
+@using DailyJournal.Service
+@inject EntryService EntryService
+@inject NavigationManager Nav
 @inject IJSRuntime JS
 
-<h2 class="entry-title">Today’s Entry</h2>
+<h3>Today's Entry</h3>
 
-<div class="entry-meta">
-    📅 21 December 2025
-    <span class="time">🕒 12:55 PM</span>
-</div>
+@if (isLoading)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <div class="mb-2 text-muted">
+        @entry.Date.ToString("D") <span class="ms-3">Last saved: @entry.UpdatedAt.ToLocalTime().ToString("g")</span>
+    </div>
 
-<div class="entry-top">
-    <InputText class="title-input" placeholder="Enter Title" />
+    <div class="mb-3">
+        <label class="form-label">Mood (optional)</label>
+        <InputText @bind-Value="entry.Mood" class="form-control" placeholder="How do you feel?" />
+    </div>
 
-    <span class="badge positive">Positive</span>
-    <span class="badge happy">😊 Happy</span>
-</div>
+    <div class="mb-3">
+        <label class="form-label">Entry</label>
+        <div class="editor-container">
+            <div id="editor" style="min-height:300px;background:#fff;"></div>
+        </div>
+        <small class="text-muted d-block mt-1">~@EstimateWordCount() words</small>
+    </div>
 
-<!-- Quill Toolbar & Editor -->
-<div class="editor-container">
-    <div id="editor"></div>
-</div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary" @onclick="SaveAsync" disabled="@isSaving">
+            @(isSaving ? "Saving..." : "Save")
+        </button>
 
-<div class="action-buttons">
-    <button class="btn btn-primary">Save</button>
-    <button class="btn btn-primary">Save PDF</button>
-</div>
+        @if (entry.EntryID != 0)
+        {
+            <button class="btn btn-danger" @onclick="DeleteAsync" disabled="@isSaving">
+                @(isSaving ? "Working..." : "Delete")
+            </button>
+        }
+
+        <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(message))
+    {
+        <p class="mt-2 @(isError ? "text-danger" : "text-success")">@message</p>
+    }
+}
 
 @code {
+    private EntryModel entry = new();
+    private bool isLoading = true;
+    private bool isSaving;
+    private string? message;
+    private bool isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            entry = await EntryService.GetTodayEntryAsync();
+        }
+        catch (Exception ex)
+        {
+            message = $"Failed to load entry: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            // Initialize Quill editor and then set the content to the entry's HTML
             await JS.InvokeVoidAsync("quillEditor.init");
+            if (!string.IsNullOrEmpty(entry.Content))
+            {
+                await JS.InvokeVoidAsync("quillEditor.setContent", entry.Content);
+            }
         }
     }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            isSaving = true;
+            // Get HTML content from Quill via JS interop
+            var html = await JS.InvokeAsync<string>("quillEditor.getContent");
+            entry.Content = html ?? string.Empty;
+
+            var (success, msg) = await EntryService.SaveAsync(entry);
+            message = msg;
+            isError = !success;
+
+            if (success)
+            {
+                // Refresh to make sure IDs/timestamps are up-to-date
+                entry = await EntryService.GetTodayEntryAsync();
+                // Update editor with saved content (in case DB normalized)
+                await JS.InvokeVoidAsync("quillEditor.setContent", entry.Content);
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Save failed: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (entry.EntryID == 0) return;
+
+        // simple confirm
+        if (!await JS.InvokeAsync<bool>("confirm", "Delete this entry permanently?"))
+            return;
+
+        try
+        {
+            isSaving = true;
+            var (success, msg) = await EntryService.DeleteAsync(entry.EntryID);
+            message = msg;
+            isError = !success;
+
+            if (success)
+            {
+                entry = new EntryModel { Date = DateTime.UtcNow.Date };
+                await JS.InvokeVoidAsync("quillEditor.setContent", entry.Content);
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Delete failed: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Nav.NavigateTo("/home");
+    }
+
+    // Estimate words by stripping HTML tags
+    private int EstimateWordCount()
+    {
+        if (string.IsNullOrWhiteSpace(entry.Content)) return 0;
+        var plain = System.Text.RegularExpressions.Regex.Replace(entry.Content, "<.*?>", string.Empty);
+        var words = plain.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        return words.Length;
+    }
 }
-<h3>Editor</h3>
 
