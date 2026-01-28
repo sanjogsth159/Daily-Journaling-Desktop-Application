@@ -1,0 +1,230 @@
+@page "/calendar"
+@using DailyJournal.Model
+@using DailyJournal.Database
+@using DailyJournal.Components.Shared
+@inject NavigationManager Nav
+@inject DailyJournal.Service.EntryService EntryService
+
+<h2 class="welcome-text">Calendar</h2>
+
+@if (isLoading)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <div class="calendar-page-grid">
+
+        <div class="left-panel">
+            <div class="card p-3 mb-3">
+                <div class="d-flex mb-2">
+                    <input class="form-control me-2" placeholder="Search title or content..." @bind="searchText" @bind:event="oninput" />
+                    <button class="btn btn-primary" @onclick="ApplyFilters">Search</button>
+                </div>
+
+                <div class="d-flex gap-2 mb-2">
+                    <input type="date" class="form-control" @bind="filterStart" />
+                    <input type="date" class="form-control" @bind="filterEnd" />
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label small">Filter by moods</label>
+                    <div class="mood-filters d-flex flex-wrap gap-1">
+                        @foreach (var cat in MoodCategories)
+                        {
+                            <div class="me-2">
+                                <div class="small fw-bold">@cat.Key</div>
+                                @foreach (var m in cat.Value)
+                                {
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="@($"cal_m_{m}")" @onchange="e => ToggleMood(m, e.Value as bool?)" checked="@(selectedMoods.Contains(m))" />
+                                        <label class="form-check-label small" for="@($"cal_m_{m}")">@m</label>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label small">Tags (comma separated)</label>
+                    <input class="form-control" placeholder="tag1, tag2" @bind="tagFilter" />
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-secondary" @onclick="ResetFilters">Reset</button>
+                    <button class="btn btn-sm btn-outline-primary ms-auto" @onclick="ShowAll">Show All</button>
+                </div>
+            </div>
+
+            <div class="card p-3">
+                <h5 class="mb-2">Entries @((selectedDate.HasValue) ? $"on {selectedDate:yyyy-MM-dd}" : "")</h5>
+                <EntriesList Filtered="FilteredForSelectedDate.ToList()" PageSize="10" OnView="ViewEntry" />
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <CalendarView Entries="entries" OnDateSelected="OnCalendarDateSelected" />
+
+            <div class="card p-3 mt-3">
+                <h6>Quick actions</h6>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" @onclick="NavigateToTodayEntry">Open Today's Editor</button>
+                    <button class="btn btn-outline-secondary" @onclick="CreateNew">New entry</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<EntryModel> entries = new();
+    private bool isLoading = true;
+
+    // filters / UI state
+    private DateTime? selectedDate;
+    private string searchText = string.Empty;
+    private DateTime? filterStart;
+    private DateTime? filterEnd;
+    private string tagFilter = string.Empty;
+    private HashSet<string> selectedMoods = new();
+
+    // results
+    private List<EntryModel> Filtered = new();
+    private IEnumerable<EntryModel> FilteredForSelectedDate =>
+        (selectedDate.HasValue ? Filtered.Where(e => e.Date.Date == selectedDate.Value.Date) : Filtered)
+        .OrderByDescending(e => e.Date);
+
+    // Mood categories (shared theme with editor/home)
+    private readonly Dictionary<string, string[]> MoodCategories = new()
+    {
+        { "Positive", new[] { "Happy", "Excited", "Relaxed", "Grateful", "Confident" } },
+        { "Neutral",  new[] { "Calm", "Thoughtful", "Curious", "Nostalgic", "Bored" } },
+        { "Negative", new[] { "Sad", "Angry", "Stressed", "Lonely", "Anxious" } }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            entries = await AppDatabase.Instance.GetAllEntriesAsync() ?? new List<EntryModel>();
+            // initialize filtered to all entries
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Calendar init error: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var q = entries.AsEnumerable();
+
+        if (filterStart.HasValue) q = q.Where(e => e.Date.Date >= filterStart.Value.Date);
+        if (filterEnd.HasValue) q = q.Where(e => e.Date.Date <= filterEnd.Value.Date);
+
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            var s = searchText.Trim().ToLowerInvariant();
+            q = q.Where(e =>
+                (!string.IsNullOrWhiteSpace(e.Title) && e.Title.ToLowerInvariant().Contains(s)) ||
+                (!string.IsNullOrWhiteSpace(e.Content) && e.Content.ToLowerInvariant().Contains(s))
+            );
+        }
+
+        if (selectedMoods.Any())
+        {
+            q = q.Where(e => selectedMoods.Contains(e.PrimaryMood) ||
+                             selectedMoods.Contains(e.SecondaryMood1 ?? string.Empty) ||
+                             selectedMoods.Contains(e.SecondaryMood2 ?? string.Empty));
+        }
+
+        if (!string.IsNullOrWhiteSpace(tagFilter))
+        {
+            var tags = tagFilter.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(t => t.Trim().ToLowerInvariant())
+                                .Where(t => !string.IsNullOrWhiteSpace(t))
+                                .ToArray();
+            if (tags.Any())
+            {
+                q = q.Where(e =>
+                    !string.IsNullOrWhiteSpace(e.Tags) &&
+                    tags.Any(t => e.Tags!.ToLowerInvariant().Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).Contains(t))
+                );
+            }
+        }
+
+        Filtered = q.OrderByDescending(e => e.Date).ToList();
+
+        // If a date is selected, keep it — entries list will reflect selection
+    }
+
+    private void ResetFilters()
+    {
+        searchText = string.Empty;
+        filterStart = null;
+        filterEnd = null;
+        tagFilter = string.Empty;
+        selectedMoods.Clear();
+        selectedDate = null;
+        ApplyFilters();
+    }
+
+    private void ShowAll()
+    {
+        selectedDate = null;
+        filterStart = null;
+        filterEnd = null;
+        ApplyFilters();
+    }
+
+    private void ToggleMood(string mood, bool? isChecked)
+    {
+        if (isChecked == true)
+            selectedMoods.Add(mood);
+        else
+            selectedMoods.Remove(mood);
+    }
+
+    private async Task OnCalendarDateSelected(DateTime date)
+    {
+        selectedDate = date.Date;
+        // restrict filters to selected date so the list shows that day's entries
+        filterStart = selectedDate;
+        filterEnd = selectedDate;
+        ApplyFilters();
+
+        await Task.CompletedTask;
+    }
+
+    private void ViewEntry(int entryId)
+    {
+        // Find the entry by id and navigate to the date-based route expected by Editor.razor.
+        var e = entries.FirstOrDefault(x => x.EntryID == entryId);
+        if (e != null)
+        {
+            Nav.NavigateTo($"/entry/{e.Date:yyyy-MM-dd}");
+        }
+        else
+        {
+            // Fallback (shouldn't normally happen): open today's editor
+            Nav.NavigateTo("/today-entry");
+        }
+    }
+
+    private void CreateNew()
+    {
+        Nav.NavigateTo("/today-entry");
+    }
+
+    private void NavigateToTodayEntry()
+    {
+        Nav.NavigateTo("/today-entry");
+    }
+}

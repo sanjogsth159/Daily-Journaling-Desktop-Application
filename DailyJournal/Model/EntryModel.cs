@@ -9,6 +9,9 @@ namespace DailyJournal.Model
         [PrimaryKey, AutoIncrement]
         public int EntryID { get; set; }
 
+        // Optional title (searchable)
+        public string? Title { get; set; }
+
         // Date only (store as UTC date)
         [Required]
         public DateTime Date { get; set; } = DateTime.UtcNow.Date;
@@ -18,7 +21,14 @@ namespace DailyJournal.Model
 
         public string? Mood { get; set; }
 
-        // Not persisted; convenience property
+        // Primary mood used for analytics (new)
+        public string PrimaryMood { get; set; } = string.Empty;
+
+        // Optional secondary moods (up to two)
+        public string? SecondaryMood1 { get; set; }
+        public string? SecondaryMood2 { get; set; }
+
+        public string? Tags { get; set; }
         [Ignore]
         public int WordCount => string.IsNullOrWhiteSpace(Content)
             ? 0

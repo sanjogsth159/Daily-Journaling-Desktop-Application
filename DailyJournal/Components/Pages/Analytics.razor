@@ -1,73 +1,239 @@
 ﻿@page "/analytics"
+@using DailyJournal.Model
+@using DailyJournal.Database
+@inject IJSRuntime JS
+@inject NavigationManager Nav
 
-<h2 class="analytics-title">Analytics</h2>
+<h2 class="welcome-text">Analytics</h2>
 
-<!-- Date Range Filter -->
-<div class="filter-bar">
-    <span>📅 Date Range</span>
-    <input type="date" />
-    <span>to</span>
-    <input type="date" />
-</div>
+@if (isLoading)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <div class="analytics-grid compact">
 
-<div class="analytics-grid">
-
-    <!-- Mood Distribution -->
-    <div class="analytics-card">
-        <h4>Mood Distribution</h4>
-        <div class="chart-placeholder">Pie / Bar Chart</div>
-        <p>Positive • Neutral • Negative</p>
-    </div>
-
-    <!-- Most Frequent Mood -->
-    <div class="analytics-card">
-        <h4>Most Frequent Mood</h4>
-        <div class="highlight-box">😊 Happy</div>
-    </div>
-
-    <!-- Daily Streak -->
-    <div class="analytics-card">
-        <h4>Daily Streak</h4>
-        <div class="metric">🔥 7 Days</div>
-    </div>
-
-    <!-- Longest Streak -->
-    <div class="analytics-card">
-        <h4>Longest Streak</h4>
-        <div class="metric">🏆 21 Days</div>
-    </div>
-
-    <!-- Missed Days -->
-    <div class="analytics-card full-width">
-        <h4>Missed Days</h4>
-        <div class="tag-list">
-            <span class="tag">12 Dec</span>
-            <span class="tag">18 Dec</span>
-            <span class="tag">25 Dec</span>
+        <div class="stat-card small">
+            <div class="stat-title">Total entries</div>
+            <div class="stat-value">@totalEntries</div>
         </div>
-    </div>
 
-    <!-- Most Used Tags -->
-    <div class="analytics-card">
-        <h4>Most Used Tags</h4>
-        <div class="chart-placeholder">Bar / Word Cloud</div>
-        <p>#Work #Health #Travel</p>
-    </div>
+        <div class="stat-card small">
+            <div class="stat-title">Average words / entry</div>
+            <div class="stat-value">@averageWords</div>
+        </div>
 
-    <!-- Tag Breakdown -->
-    <div class="analytics-card">
-        <h4>Tag Breakdown</h4>
-        <div class="chart-placeholder">% per Category</div>
-    </div>
+        <div class="stat-card small">
+            <div class="stat-title">Current streak</div>
+            <div class="stat-value">@currentStreak</div>
+        </div>
 
-    <!-- Word Count Trends -->
-    <div class="analytics-card full-width">
-        <h4>Word Count Trends</h4>
-        <div class="chart-placeholder">Line Chart (Avg Words / Entry)</div>
-    </div>
+        <div class="stat-card small">
+            <div class="stat-title">Longest streak</div>
+            <div class="stat-value">@longestStreak</div>
+        </div>
 
-</div>
+        <div class="card wide mt-3 p-3 compact-chart">
+            <h5 class="mb-2">Mood distribution</h5>
+            @if (moodTotals.Any())
+            {
+                <div class="chart-wrap">
+                    <canvas id="moodChart"></canvas>
+                </div>
+            }
+            else
+            {
+                <div class="text-muted">No mood data yet.</div>
+            }
+        </div>
+
+        <div class="card wide mt-3 p-3">
+            <h5 class="mb-2">Top tags</h5>
+            @if (topTags.Any())
+            {
+                <ul class="compact-list">
+                    @foreach (var t in topTags)
+                    {
+                        <li>@t.Key — @t.Value</li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="text-muted">No tags found.</div>
+            }
+        </div>
+
+        <div class="card wide mt-3 p-3 compact-chart">
+            <h5 class="mb-2">Entries over last 30 days</h5>
+            <div class="chart-wrap">
+                <canvas id="entriesChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+}
 
 @code {
+    private List<EntryModel> entries = new();
+    private bool isLoading = true;
 
+    private int totalEntries;
+    private int averageWords;
+    private int longestStreak;
+    private int currentStreak;
+
+    private Dictionary<string, int> moodTotals = new();
+    private List<KeyValuePair<string,int>> topTags = new();
+    private List<KeyValuePair<DateTime,int>> entriesByDay = new();
+    private int maxDayCount = 0;
+
+    // arrays for Chart.js
+    private string[] moodLabels = Array.Empty<string>();
+    private int[] moodCounts = Array.Empty<int>();
+    private string[] dayLabels = Array.Empty<string>();
+    private int[] dayCounts = Array.Empty<int>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            entries = await AppDatabase.Instance.GetAllEntriesAsync() ?? new List<EntryModel>();
+            totalEntries = entries.Count;
+            averageWords = totalEntries == 0 ? 0 : (int)Math.Round(entries.Average(e => e.WordCount));
+
+            var dates = entries.Select(e => e.Date.Date).Distinct().OrderByDescending(d => d).ToList();
+            longestStreak = ComputeLongestStreak(dates);
+            currentStreak = ComputeCurrentStreak(dates);
+
+            BuildMoodTotals();
+            BuildTopTags();
+            BuildEntriesByDay(30);
+
+            // prepare chart arrays
+            moodLabels = moodTotals.Keys.ToArray();
+            moodCounts = moodTotals.Values.ToArray();
+            dayLabels = entriesByDay.Select(p => p.Key.ToString("MM/dd")).ToArray();
+            dayCounts = entriesByDay.Select(p => p.Value).ToArray();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Analytics load error: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                if (moodLabels.Length > 0)
+                    await JS.InvokeVoidAsync("chartInterop.renderPie", "moodChart", moodLabels, moodCounts);
+
+                if (dayLabels.Length > 0)
+                    await JS.InvokeVoidAsync("chartInterop.renderBar", "entriesChart", dayLabels, dayCounts);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Chart render error: {ex}");
+            }
+        }
+    }
+
+    private void BuildMoodTotals()
+    {
+        var dict = new Dictionary<string,int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var e in entries)
+        {
+            if (!string.IsNullOrWhiteSpace(e.PrimaryMood))
+            {
+                dict.TryGetValue(e.PrimaryMood!, out var c);
+                dict[e.PrimaryMood!] = c + 1;
+            }
+
+            if (!string.IsNullOrWhiteSpace(e.SecondaryMood1))
+            {
+                dict.TryGetValue(e.SecondaryMood1!, out var c2);
+                dict[e.SecondaryMood1!] = c2 + 1;
+            }
+
+            if (!string.IsNullOrWhiteSpace(e.SecondaryMood2))
+            {
+                dict.TryGetValue(e.SecondaryMood2!, out var c3);
+                dict[e.SecondaryMood2!] = c3 + 1;
+            }
+        }
+
+        moodTotals = dict;
+    }
+
+    private void BuildTopTags()
+    {
+        var tagCounts = new Dictionary<string,int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var e in entries)
+        {
+            if (string.IsNullOrWhiteSpace(e.Tags)) continue;
+            var parts = e.Tags!.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => t.Trim().ToLowerInvariant());
+            foreach (var t in parts)
+            {
+                if (string.IsNullOrWhiteSpace(t)) continue;
+                tagCounts.TryGetValue(t, out var c);
+                tagCounts[t] = c + 1;
+            }
+        }
+
+        topTags = tagCounts.OrderByDescending(k => k.Value).Take(10).ToList();
+    }
+
+    private void BuildEntriesByDay(int days)
+    {
+        var start = DateTime.UtcNow.Date.AddDays(-(days - 1));
+        var dayMap = new Dictionary<DateTime,int>();
+        for (var d = start; d <= DateTime.UtcNow.Date; d = d.AddDays(1))
+            dayMap[d] = 0;
+
+        foreach (var e in entries)
+        {
+            var dt = e.Date.Date;
+            if (dt >= start && dt <= DateTime.UtcNow.Date)
+                dayMap[dt] = dayMap.TryGetValue(dt, out var v) ? v + 1 : 1;
+        }
+
+        entriesByDay = dayMap.OrderBy(k => k.Key).ToList();
+        maxDayCount = entriesByDay.Any() ? entriesByDay.Max(p => p.Value) : 0;
+    }
+
+    private static int ComputeLongestStreak(List<DateTime> sortedDescDates)
+    {
+        if (sortedDescDates == null || sortedDescDates.Count == 0) return 0;
+        int longest = 1;
+        int current = 1;
+        for (int i = 1; i < sortedDescDates.Count; i++)
+        {
+            var prev = sortedDescDates[i - 1];
+            var cur = sortedDescDates[i];
+            if ((prev - cur).Days == 1) current++;
+            else { if (current > longest) longest = current; current = 1; }
+        }
+        if (current > longest) longest = current;
+        return longest;
+    }
+
+    private static int ComputeCurrentStreak(List<DateTime> sortedDescDates)
+    {
+        if (sortedDescDates == null || sortedDescDates.Count == 0) return 0;
+        int streak = 0;
+        var cursor = DateTime.UtcNow.Date;
+        var set = new HashSet<DateTime>(sortedDescDates);
+        while (set.Contains(cursor)) { streak++; cursor = cursor.AddDays(-1); }
+        return streak;
+    }
 }

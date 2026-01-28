@@ -1,0 +1,103 @@
+@using DailyJournal.Model
+@inject NavigationManager Nav
+
+<div class="calendar-card">
+    <div class="calendar-header d-flex justify-content-between align-items-center">
+        <button class="btn btn-sm btn-outline-secondary" @onclick="PrevMonth">&#9664;</button>
+        <strong>@MonthYearLabel</strong>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="NextMonth">&#9654;</button>
+    </div>
+
+    <div class="calendar-grid mt-2">
+        @foreach (var dow in DayOfWeekHeaders)
+        {
+            <div class="calendar-cell calendar-cell-header">@dow</div>
+        }
+
+        @foreach (var day in CalendarDays)
+        {
+            var isToday = day.Date.Date == DateTime.UtcNow.Date;
+            <div class="calendar-cell @(day.InMonth ? "in-month" : "out-month") @(isToday ? "today" : "")"
+                 @onclick="@(() => OnDayClicked(day.Date))">
+                <div class="day-number">@day.Date.Day</div>
+                @if (day.Count > 0)
+                {
+                    <div class="entry-count">@day.Count</div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<EntryModel> Entries { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<DateTime> OnDateSelected { get; set; }
+
+    private DateTime viewMonth = DateTime.UtcNow.Date;
+    private string[] DayOfWeekHeaders => new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+
+    private string MonthYearLabel => viewMonth.ToString("MMMM yyyy");
+
+    private class CalendarDay
+    {
+        public DateTime Date { get; set; }
+        public bool InMonth { get; set; }
+        public int Count { get; set; }
+    }
+
+    private List<CalendarDay> CalendarDays = new();
+
+    protected override void OnParametersSet()
+    {
+        BuildCalendar();
+    }
+
+    private void BuildCalendar()
+    {
+        CalendarDays.Clear();
+
+        var firstOfMonth = new DateTime(viewMonth.Year, viewMonth.Month, 1);
+        var start = firstOfMonth.AddDays(-(int)firstOfMonth.DayOfWeek);
+        var end = start.AddDays(6 + 7 * 5);
+
+        var entriesByDate = Entries
+            .GroupBy(e => e.Date.Date)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        for (var d = start; d <= end; d = d.AddDays(1))
+        {
+            CalendarDays.Add(new CalendarDay
+            {
+                Date = d,
+                InMonth = d.Month == viewMonth.Month,
+                Count = entriesByDate.TryGetValue(d.Date, out var c) ? c : 0
+            });
+        }
+    }
+
+    private async Task OnDayClicked(DateTime date)
+    {
+        // Notify parent component/page
+        if (OnDateSelected.HasDelegate)
+            await OnDateSelected.InvokeAsync(date.Date);
+
+        // Navigate to editor for that day (format yyyy-MM-dd)
+        var route = $"/entry/{date.Date:yyyy-MM-dd}";
+        Nav.NavigateTo(route);
+    }
+
+    private void PrevMonth()
+    {
+        viewMonth = viewMonth.AddMonths(-1);
+        BuildCalendar();
+    }
+
+    private void NextMonth()
+    {
+        viewMonth = viewMonth.AddMonths(1);
+        BuildCalendar();
+    }
+}

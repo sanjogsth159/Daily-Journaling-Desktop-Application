@@ -41,26 +41,37 @@
 
 /* Quill editor */
 .editor-container {
-    background: white;
-    border-radius: 15px;
-    padding: 10px;
+    background: transparent;
+    border-radius: 6px;
 }
 
 #editor {
-    height: 300px;
-}
-
-/* Make Quill toolbar buttons primary */
-.ql-toolbar button {
-    background-color: #0d6efd;
-    color: white;
+    min-height: 300px;
+    background: #ffffff;
     border-radius: 6px;
-    margin-right: 5px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    overflow: auto;
 }
 
-    .ql-toolbar button:hover {
-        background-color: #0b5ed7;
-    }
+/* Quill editor content area */
+#editor .ql-editor {
+    min-height: 260px;
+    padding: 12px;
+    color: #111;
+    background: #fff;
+}
+
+/* Make sure toolbar is visible and compact */
+#editor .ql-toolbar.ql-snow {
+    background: #f8fafb;
+    border-radius: 6px 6px 0 0;
+    border: 1px solid rgba(0,0,0,0.04);
+}
+
+/* Ensure editor container can't be collapsed by other rules */
+.editor-container, #editor, #editor .ql-editor {
+    display: block !important;
+}
 
 /* Action buttons */
 .action-buttons {

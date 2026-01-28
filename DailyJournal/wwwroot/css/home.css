@@ -4,8 +4,25 @@
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr minmax(320px, 900px) 1fr;
     gap: 20px;
+    align-items: start;
+}
+
+
+.content-center {
+    grid-column: 2; 
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 12px;
 }
 
 /* Stat Cards */
@@ -15,11 +32,11 @@
     padding: 18px;
     border-radius: 10px;
     font-size: 16px;
+    text-align: center;
 }
 
 /* Entry Card */
 .entry-card {
-    grid-column: span 2;
     background-color: #6f8499;
     color: white;
     padding: 20px;
@@ -66,7 +83,6 @@
 
 /* Quick Actions */
 .quick-actions {
-    grid-column: span 2;
     background-color: #6f8499;
     padding: 20px;
     border-radius: 12px;
@@ -78,4 +94,20 @@
     height: 35px;
     border-radius: 20px;
     margin-top: 10px;
+}
+
+/* Responsive fallback: single-column layout on small screens */
+@media (max-width: 900px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .content-center {
+        grid-column: auto;
+        padding: 0 12px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
 }

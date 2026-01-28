@@ -1,56 +1,241 @@
 ﻿@page "/home"
+@using DailyJournal.Model
+@using DailyJournal.Database
+@using DailyJournal.Components.Shared
+@inject NavigationManager Nav
+@inject DailyJournal.Service.EntryService EntryService
 
-<h2 class="welcome-text">Welcome Back!</h2>
 
-<div class="dashboard-grid">
 
-    <!-- Stat Cards -->
-    <div class="stat-card">
-        🔥 <span>Total streak</span>
-    </div>
+@if (isLoading)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <h2 class="welcome-text">Welcome Back!</h2>
+    <div class="dashboard-grid home-center">
 
-    <div class="stat-card">
-        🧾 <span>Total entries</span>
-    </div>
+        <div class="left-column content-center">
 
-    <div class="stat-card">
-        🏅 <span>Longest streak</span>
-    </div>
+            <!-- Recent entries (timeline) -->
+            <div class="card p-3 mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong>Recent entries</strong>
+                    <div>
+                        <button class="btn btn-sm btn-link" @onclick="NavigateToEntries">View all</button>
+                        <button class="btn btn-sm btn-link" @onclick="NavigateToCalendar">Calendar</button>
+                    </div>
+                </div>
 
-    <div class="stat-card">
-        🕯️ <span>Average word/entry</span>
-    </div>
+                @if (recentEntries.Any())
+                {
+                    @foreach (var e in recentEntries)
+                    {
+                        <div class="entry-row mb-2 p-2 border rounded">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>@(string.IsNullOrWhiteSpace(e.Title) ? GetSnippet(e.Content, 60) : e.Title)</strong>
+                                    <div class="text-muted small">@e.Date.ToLocalTime().ToString("g") • @(string.IsNullOrWhiteSpace(e.PrimaryMood) ? "—" : e.PrimaryMood)</div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="small text-muted">@e.WordCount words</div>
+                                    <button class="btn btn-sm btn-link" @onclick="() => ViewEntry(e.EntryID)">View</button>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-truncate">@GetSnippet(e.Content)</div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-muted">No entries yet. Start by writing today's entry.</div>
+                    <div class="mt-2">
+                        <button class="btn btn-primary" @onclick="NavigateToTodayEntry">Write today's entry</button>
+                    </div>
+                }
+            </div>
 
-    <!-- Today's Entry -->
-    <div class="entry-card">
-        <div class="entry-header">
-            📅 <strong>Today's Entry</strong>
+            <!-- Stats arranged after recent entries, centered -->
+            <div class="stats-grid mb-3">
+                <div class="stat-card">
+                    🔥 <span>Total streak</span>
+                    <div class="stat-value">@currentStreak</div>
+                </div>
+
+                <div class="stat-card">
+                    🧾 <span>Total entries</span>
+                    <div class="stat-value">@totalEntries</div>
+                </div>
+
+                <div class="stat-card">
+                    🏅 <span>Longest streak</span>
+                    <div class="stat-value">@longestStreak</div>
+                </div>
+
+                <div class="stat-card">
+                    🕯️ <span>Average words/entry</span>
+                    <div class="stat-value">@averageWords</div>
+                </div>
+            </div>
+
+            <!-- Today's Entry condensed (centered below stats) -->
+            <div class="entry-card mb-3">
+                <div class="entry-header">
+                    📅 <strong>Today's Entry</strong>
+                </div>
+
+                @if (todayEntry != null && todayEntry.EntryID != 0)
+                {
+                    <div class="entry-meta">
+                        <span class="mood">@(string.IsNullOrWhiteSpace(todayEntry.PrimaryMood) ? "—" : todayEntry.PrimaryMood)</span>
+                        <span class="time">🕒 @GetTimeAgo(todayEntry.UpdatedAt)</span>
+                    </div>
+
+                    <div class="entry-content">
+                        @GetSnippet(todayEntry.Content)
+                    </div>
+
+                    <div class="entry-footer">
+                        • @todayEntry.WordCount words
+                        <a class="view-link" @onclick="NavigateToTodayEntry">Edit →</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="entry-content text-muted">
+                        You haven't written an entry for today yet.
+                    </div>
+                    <div class="entry-footer">
+                        <button class="btn btn-primary btn-sm" @onclick="NavigateToTodayEntry">Write today's entry</button>
+                    </div>
+                }
+            </div>
+
+            <!-- Quick Actions centered -->
+            <div class="quick-actions mb-3">
+                <h6>Quick Actions</h6>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" @onclick="NavigateToTodayEntry">Open Today's Editor</button>
+                    <button class="btn btn-outline-secondary" @onclick="NavigateToCalendar">Open Calendar</button>
+                    <button class="btn btn-outline-success" @onclick="NavigateToEntries">All Entries</button>
+                </div>
+            </div>
+
         </div>
-
-        <div class="entry-meta">
-            <span class="mood">😊 Happy</span>
-            <span class="time">🕒 20 min ago</span>
-        </div>
-
-        <div class="entry-content">
-            Today was a productive day. I made great progress on my projects
-            and spent quality time with family. Feeling grateful for the
-            opportunities ahead.
-        </div>
-
-        <div class="entry-footer">
-            • 100 words
-            <span class="view-link">View full Entry →</span>
-        </div>
     </div>
+}
 
-    <!-- Quick Actions -->
-    <div class="quick-actions">
-        <h4>Quick Actions</h4>
-        <div class="action-box"></div>
-        <div class="action-box"></div>
-        <div class="action-box"></div>
-    </div>
+@code {
+    private List<EntryModel> entries = new();
+    private List<EntryModel> recentEntries = new();
+    private EntryModel todayEntry = new();
+    private bool isLoading = true;
 
-</div>
+    private int totalEntries;
+    private int longestStreak;
+    private int currentStreak;
+    private int averageWords;
 
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            entries = await AppDatabase.Instance.GetAllEntriesAsync() ?? new List<EntryModel>();
+
+            totalEntries = entries.Count;
+            averageWords = totalEntries == 0 ? 0 : (int)Math.Round(entries.Average(e => e.WordCount));
+
+            var dates = entries.Select(e => e.Date.Date).Distinct().OrderByDescending(d => d).ToList();
+            longestStreak = ComputeLongestStreak(dates);
+            currentStreak = ComputeCurrentStreak(dates);
+
+            // show the most recent 5 entries on the home timeline
+            recentEntries = entries.OrderByDescending(e => e.Date).Take(5).ToList();
+
+            todayEntry = await EntryService.GetTodayEntryAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Home init error: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ViewEntry(int entryId)
+    {
+        // Find the entry by id and navigate to the date-based route expected by Editor.razor.
+        var e = entries.FirstOrDefault(x => x.EntryID == entryId);
+        if (e != null)
+        {
+            Nav.NavigateTo($"/entry/{e.Date:yyyy-MM-dd}");
+        }
+        else
+        {
+            // Fallback (shouldn't normally happen): open today's editor
+            Nav.NavigateTo("/today-entry");
+        }
+    }
+
+    private void NavigateToEntries()
+    {
+        Nav.NavigateTo("/entries");
+    }
+
+    private void NavigateToCalendar()
+    {
+        Nav.NavigateTo("/calendar");
+    }
+
+    private void NavigateToTodayEntry()
+    {
+        Nav.NavigateTo("/today-entry");
+    }
+
+    private static int ComputeLongestStreak(List<DateTime> sortedDescDates)
+    {
+        if (sortedDescDates == null || sortedDescDates.Count == 0) return 0;
+        int longest = 1;
+        int current = 1;
+        for (int i = 1; i < sortedDescDates.Count; i++)
+        {
+            var prev = sortedDescDates[i - 1];
+            var cur = sortedDescDates[i];
+            if ((prev - cur).Days == 1) current++;
+            else { if (current > longest) longest = current; current = 1; }
+        }
+        if (current > longest) longest = current;
+        return longest;
+    }
+
+    private static int ComputeCurrentStreak(List<DateTime> sortedDescDates)
+    {
+        if (sortedDescDates == null || sortedDescDates.Count == 0) return 0;
+        int streak = 0;
+        var cursor = DateTime.UtcNow.Date;
+        var set = new HashSet<DateTime>(sortedDescDates);
+        while (set.Contains(cursor)) { streak++; cursor = cursor.AddDays(-1); }
+        return streak;
+    }
+
+    private string GetSnippet(string html, int max = 140)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return string.Empty;
+        var plain = System.Text.RegularExpressions.Regex.Replace(html, "<.*?>", string.Empty).Trim();
+        if (plain.Length <= max) return plain;
+        return plain.Substring(0, max).TrimEnd() + "…";
+    }
+
+    private string GetTimeAgo(DateTime updatedUtc)
+    {
+        var ts = DateTime.UtcNow - updatedUtc.ToUniversalTime();
+        if (ts.TotalMinutes < 1) return "just now";
+        if (ts.TotalMinutes < 60) return $"{(int)ts.TotalMinutes} min ago";
+        if (ts.TotalHours < 24) return $"{(int)ts.TotalHours} hrs ago";
+        return updatedUtc.ToLocalTime().ToString("g");
+    }
+}

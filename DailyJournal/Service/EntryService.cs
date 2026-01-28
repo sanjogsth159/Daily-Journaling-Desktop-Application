@@ -1,6 +1,6 @@
 ﻿using DailyJournal.Database;
 using DailyJournal.Model;
-    using System;
+using System;
 using System.Threading.Tasks;
 
 namespace DailyJournal.Service
@@ -15,6 +15,12 @@ namespace DailyJournal.Service
 
             // return new empty one for today
             return new EntryModel { Date = today };
+        }
+
+        // New: load entry for arbitrary date (UTC date)
+        public Task<EntryModel?> GetEntryByDateAsync(DateTime date)
+        {
+            return AppDatabase.Instance.GetEntryByDateAsync(date.Date);
         }
 
         public async Task<(bool Success, string Message)> SaveAsync(EntryModel entry)

@@ -27,7 +27,5 @@ namespace DailyJournal.Model
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime LastLoginAt { get; set; } = DateTime.Now;
-
-        public string? PreferredTheme { get; set; }
     }
 }
